@@ -4,12 +4,12 @@ import fs from 'fs';
 import { Request } from 'express';
 
 // Ensure uploads directory exists
-const UPLOAD_DIR = path.join(process.cwd(), 'uploads');
+const UPLOAD_DIR = '/tmp/uploads'
 const ALLOWED_DIRS = ['lab', 'radiology', 'prescriptions', 'general'];
 
 for (const dir of ALLOWED_DIRS) {
   const fullPath = path.join(UPLOAD_DIR, dir);
-  if (!fs.existsSync(fullPath)) fs.mkdirSync(fullPath, { recursive: true });
+ fs.mkdirSync(fullPath, { recursive: true });
 }
 
 // Storage engine
