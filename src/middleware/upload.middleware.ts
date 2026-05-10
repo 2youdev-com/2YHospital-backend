@@ -2,14 +2,20 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { Request } from 'express';
+import { config } from '../config/env';
 
 // Ensure uploads directory exists
-const UPLOAD_DIR = '/tmp/uploads'
+const UPLOAD_DIR = config.nodeEnv === 'production' 
+  ? '/tmp/uploads' 
+  : path.join(process.cwd(), 'uploads');
+
 const ALLOWED_DIRS = ['lab', 'radiology', 'prescriptions', 'general'];
 
 for (const dir of ALLOWED_DIRS) {
   const fullPath = path.join(UPLOAD_DIR, dir);
- fs.mkdirSync(fullPath, { recursive: true });
+  if (!fs.existsSync(fullPath)) {
+    fs.mkdirSync(fullPath, { recursive: true });
+  }
 }
 
 // Storage engine

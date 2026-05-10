@@ -26,6 +26,9 @@ import waitlistRoutes from './modules/appointments/waitlist.routes';
 
 const app = express();
 
+// FIX: Trust proxy for rate limiting on Vercel/proxies
+app.set('trust proxy', 1);
+
 // ─── Security ───
 app.use(helmet());
 app.use(cors({
@@ -49,7 +52,10 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // ─── Static uploads ───
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+// FIX: In Vercel, /tmp is the only writable directory.
+// We point the static middleware to /tmp/uploads to match the upload service.
+const UPLOAD_ROOT = process.env.NODE_ENV === 'production' ? '/tmp/uploads' : path.join(process.cwd(), 'uploads');
+app.use('/uploads', express.static(UPLOAD_ROOT));
 
 // ─── Logging ───
 if (config.nodeEnv !== 'test') {
@@ -90,11 +96,15 @@ const start = async () => {
     await prisma.$connect();
     console.log('✅ Database connected');
 
-    app.listen(config.port, () => {
-      console.log(`\n🚀 2YHospital API running on port ${config.port}`);
-      console.log(`📌 Base URL: http://localhost:${config.port}${config.apiPrefix}`);
-      console.log(`🌍 Environment: ${config.nodeEnv}\n`);
-    });
+   app.listen(config.port, () => {
+    const baseUrl =
+    process.env.BASE_URL ||
+    `http://localhost:${config.port}`;
+
+  console.log(`\n🚀 2YHospital API running`);
+  console.log(`📌 Base URL: ${baseUrl}${config.apiPrefix}`);
+  console.log(`🌍 Environment: ${config.nodeEnv}\n`);
+  });
 
     // Start background schedulers
     startReminderScheduler();

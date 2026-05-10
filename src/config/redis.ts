@@ -1,15 +1,22 @@
 import Redis from 'ioredis';
 import { config } from './env';
 
-const redis = new Redis({
-  host: config.redis.host,
-  port: config.redis.port,
-  password: config.redis.password,
-  retryStrategy: (times) => {
-    if (times > 3) return null;
-    return Math.min(times * 50, 2000);
-  },
-});
+const redis = config.redis.url 
+  ? new Redis(config.redis.url, {
+      retryStrategy: (times) => {
+        if (times > 3) return null;
+        return Math.min(times * 50, 2000);
+      },
+    })
+  : new Redis({
+      host: config.redis.host,
+      port: config.redis.port,
+      password: config.redis.password,
+      retryStrategy: (times) => {
+        if (times > 3) return null;
+        return Math.min(times * 50, 2000);
+      },
+    });
 
 redis.on('connect', () => console.log('✅ Redis connected'));
 redis.on('error', (err) => console.error('❌ Redis error:', err.message));
