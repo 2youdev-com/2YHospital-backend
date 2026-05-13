@@ -57,8 +57,9 @@ export const config = {
   },
 
   ai: {
-    apiKey: process.env.OPENAI_API_KEY || '',
-    model: process.env.AI_MODEL || 'gpt-4o',
+    apiKey: process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY || '',
+    baseUrl: process.env.AI_BASE_URL || 'https://api.deepseek.com',
+    model: process.env.AI_MODEL || 'deepseek-chat',
   },
 
   cors: {

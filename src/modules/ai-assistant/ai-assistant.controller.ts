@@ -15,6 +15,25 @@ export const chat = async (req: AuthenticatedRequest, res: Response) => {
   } catch (e: any) { sendError(res, e.message); }
 };
 
+export const doctorChat = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { message, patientId } = req.body;
+    if (!message?.trim()) { sendError(res, 'الرسالة مطلوبة', 422); return; }
+    const result = await svc.doctorChat(req.user!.id, message, patientId);
+    sendSuccess(res, result, 'تمت المعالجة');
+  } catch (e: any) { sendError(res, e.message); }
+};
+
+export const adminChat = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { message } = req.body;
+    const period = req.body.period === 'weekly' ? 'weekly' : 'daily';
+    if (!message?.trim()) { sendError(res, 'الرسالة مطلوبة', 422); return; }
+    const result = await svc.adminChat(message, period);
+    sendSuccess(res, result, 'تمت المعالجة');
+  } catch (e: any) { sendError(res, e.message); }
+};
+
 export const getChatHistory = async (req: AuthenticatedRequest, res: Response) => {
   try {
     sendSuccess(res, await svc.getChatHistory(req.user!.id, req.params.sessionId), 'سجل المحادثة');

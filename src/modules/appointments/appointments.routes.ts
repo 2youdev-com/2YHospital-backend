@@ -10,7 +10,7 @@ router.use(authenticate);
 
 // Patient
 router.get('/slots', getSlots);
-router.post('/', authorize('PATIENT'), bookAppointment);
+router.post('/', authorize('PATIENT', 'ADMIN', 'RECEPTIONIST'), bookAppointment);
 router.get('/my', authorize('PATIENT'), getMyAppointments);
 router.get('/my/:id', authorize('PATIENT'), getAppointment);
 router.patch('/my/:id/cancel', authorize('PATIENT'), cancelAppointment);

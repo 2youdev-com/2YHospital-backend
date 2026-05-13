@@ -1,3 +1,4 @@
+// src/modules/admin/admin.controller.ts
 import { Response } from 'express';
 import { AdminService } from './admin.service';
 import { sendSuccess, sendError } from '../../utils/response';
@@ -7,6 +8,38 @@ const svc = new AdminService();
 
 export const getDashboard = async (_req: AuthenticatedRequest, res: Response) => {
   try { sendSuccess(res, await svc.getDashboardStats(), 'إحصائيات لوحة التحكم'); }
+  catch (e: any) { sendError(res, e.message); }
+};
+
+export const getRecentAppointments = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const limit = parseInt(req.query.limit as string) || 5;
+    sendSuccess(res, await svc.getRecentAppointments(limit), 'آخر المواعيد');
+  } catch (e: any) { sendError(res, e.message); }
+};
+
+export const getWeeklyAppointments = async (_req: AuthenticatedRequest, res: Response) => {
+  try { sendSuccess(res, await svc.getWeeklyAppointments(), 'مواعيد الأسبوع'); }
+  catch (e: any) { sendError(res, e.message); }
+};
+
+export const getMonthlyRevenue = async (_req: AuthenticatedRequest, res: Response) => {
+  try { sendSuccess(res, await svc.getMonthlyRevenue(), 'الإيرادات الشهرية'); }
+  catch (e: any) { sendError(res, e.message); }
+};
+
+export const getMonthlyAppointments = async (_req: AuthenticatedRequest, res: Response) => {
+  try { sendSuccess(res, await svc.getMonthlyAppointments(), 'المواعيد الشهرية'); }
+  catch (e: any) { sendError(res, e.message); }
+};
+
+export const getSpecialtyDistribution = async (_req: AuthenticatedRequest, res: Response) => {
+  try { sendSuccess(res, await svc.getSpecialtyDistribution(), 'توزيع التخصصات'); }
+  catch (e: any) { sendError(res, e.message); }
+};
+
+export const getDoctorsStatus = async (_req: AuthenticatedRequest, res: Response) => {
+  try { sendSuccess(res, await svc.getDoctorsStatus(), 'حالة الأطباء'); }
   catch (e: any) { sendError(res, e.message); }
 };
 

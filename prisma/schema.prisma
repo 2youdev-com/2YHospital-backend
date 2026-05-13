@@ -307,6 +307,8 @@ model Appointment {
 
   @@index([patientId, date])
   @@index([doctorId, date])
+  @@index([date])
+  @@index([status])
   @@map("appointments")
 }
 
