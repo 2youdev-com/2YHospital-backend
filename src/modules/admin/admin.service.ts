@@ -356,6 +356,43 @@ export class AdminService {
     return prisma.user.update({ where: { id: userId }, data: { isActive: !user.isActive } });
   }
 
+  async createPatient(data: any) {
+    // Normalize phone number
+    let p = data.phone?.trim() || '';
+    if (p.startsWith('0')) p = '+966' + p.substring(1);
+    if (!p.startsWith('+')) {
+      if (p.startsWith('966')) p = '+' + p;
+      else p = '+966' + p;
+    }
+
+    try {
+      const user = await prisma.user.create({
+        data: {
+          phone: p,
+          role: 'PATIENT',
+          patient: {
+            create: {
+              mrn: `MRN-${Date.now()}`,
+              nameAr: data.nameAr || data.name || 'مريض جديد',
+              nameEn: data.nameEn,
+              nationalId: data.nationalId,
+              gender: data.gender || 'MALE',
+              dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : new Date('2000-01-01'),
+              bloodType: data.bloodType,
+            },
+          },
+        },
+        include: { patient: true },
+      });
+      return user;
+    } catch (error: any) {
+      if (error.code === 'P2002') {
+        throw new Error('رقم الجوال مسجل مسبقاً في النظام');
+      }
+      throw error;
+    }
+  }
+
   // ── Branches ─────────────────────────────────────────────────────────────────
   async getBranches() {
     return prisma.branch.findMany({ orderBy: { nameAr: 'asc' } });

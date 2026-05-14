@@ -56,6 +56,12 @@ export const toggleUserStatus = async (req: AuthenticatedRequest, res: Response)
   catch (e: any) { sendError(res, e.message, 404); }
 };
 
+export const createPatient = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    sendSuccess(res, await svc.createPatient(req.body), 'تم إنشاء المريض بنجاح', 201);
+  } catch (e: any) { sendError(res, e.message); }
+};
+
 export const getBranches = async (_req: AuthenticatedRequest, res: Response) => {
   try { sendSuccess(res, await svc.getBranches(), 'الفروع'); }
   catch (e: any) { sendError(res, e.message); }

@@ -91,12 +91,12 @@ enum DayOfWeek {
 // ─────────────── USERS & AUTH ───────────────
 
 model User {
-  id          String   @id @default(uuid())
-  phone       String   @unique
-  role        UserRole
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(uuid())
+  phone     String   @unique
+  role      UserRole
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   patient       Patient?
   doctor        Doctor?
@@ -106,6 +106,8 @@ model User {
   auditLogs     AuditLog[]
   notifications Notification[]
 
+  @@index([role])
+  @@index([isActive])
   @@map("users")
 }
 
@@ -117,7 +119,7 @@ model OtpCode {
   used      Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("otp_codes")
 }
@@ -129,7 +131,7 @@ model Session {
   expiresAt    DateTime
   createdAt    DateTime @default(now())
 
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
 }
@@ -137,24 +139,24 @@ model Session {
 // ─────────────── PATIENTS ───────────────
 
 model Patient {
-  id               String    @id @default(uuid())
-  userId           String    @unique
-  mrn              String    @unique
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  mrn              String   @unique
   nameAr           String
   nameEn           String?
   dateOfBirth      DateTime
   gender           Gender
-  nationalId       String?   @unique
+  nationalId       String?  @unique
   email            String?
   bloodType        String?
   allergies        String[]
   chronicDiseases  String[]
   emergencyContact Json?
   insuranceInfo    Json?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   dependents       Dependent[]
   appointments     Appointment[]
   labResults       LabResult[]
@@ -166,6 +168,7 @@ model Patient {
   chatSessions     ChatSession[]
   waitlistEntries  WaitlistEntry[]
 
+  @@index([createdAt])
   @@map("patients")
 }
 
@@ -202,8 +205,8 @@ model Doctor {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  specialty       Specialty @relation(fields: [specialtyId], references: [id])
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  specialty       Specialty        @relation(fields: [specialtyId], references: [id])
   schedules       DoctorSchedule[]
   appointments    Appointment[]
   medicalNotes    MedicalNote[]
@@ -214,11 +217,11 @@ model Doctor {
 }
 
 model Specialty {
-  id      String   @id @default(uuid())
-  nameAr  String
-  nameEn  String
-  code    String   @unique
-  icon    String?
+  id     String  @id @default(uuid())
+  nameAr String
+  nameEn String
+  code   String  @unique
+  icon   String?
 
   doctors Doctor[]
 
@@ -238,11 +241,12 @@ model DoctorSchedule {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  doctor       Doctor    @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  branch       Branch?   @relation(fields: [branchId], references: [id])
+  doctor       Doctor        @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  branch       Branch?       @relation(fields: [branchId], references: [id])
   blockedSlots BlockedSlot[]
 
   @@unique([doctorId, dayOfWeek, branchId])
+  @@index([doctorId, dayOfWeek, isActive])
   @@map("doctor_schedules")
 }
 
@@ -255,7 +259,7 @@ model BlockedSlot {
   reason     String?
   createdAt  DateTime @default(now())
 
-  schedule   DoctorSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  schedule DoctorSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
 
   @@map("blocked_slots")
 }
@@ -298,54 +302,56 @@ model Appointment {
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
-  patient         Patient           @relation(fields: [patientId], references: [id])
-  dependent       Dependent?        @relation(fields: [dependentId], references: [id])
-  doctor          Doctor            @relation(fields: [doctorId], references: [id])
-  branch          Branch?           @relation(fields: [branchId], references: [id])
-  bill            Bill?
-  visitHistory    VisitHistory?
+  patient      Patient       @relation(fields: [patientId], references: [id])
+  dependent    Dependent?    @relation(fields: [dependentId], references: [id])
+  doctor       Doctor        @relation(fields: [doctorId], references: [id])
+  branch       Branch?       @relation(fields: [branchId], references: [id])
+  bill         Bill?
+  visitHistory VisitHistory?
 
   @@index([patientId, date])
   @@index([doctorId, date])
   @@index([date])
   @@index([status])
+  @@index([date, status])
+  @@index([doctorId, date, status])
   @@map("appointments")
 }
 
 // ─────────────── MEDICAL RECORDS ───────────────
 
 model VisitHistory {
-  id             String      @id @default(uuid())
+  id             String    @id @default(uuid())
   patientId      String
-  appointmentId  String      @unique
+  appointmentId  String    @unique
   doctorId       String
   visitDate      DateTime
   chiefComplaint String?
   diagnosis      String?
   treatmentPlan  String?
   followUpDate   DateTime?
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  patient        Patient     @relation(fields: [patientId], references: [id])
-  appointment    Appointment @relation(fields: [appointmentId], references: [id])
+  patient     Patient     @relation(fields: [patientId], references: [id])
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
 
   @@index([patientId])
   @@map("visit_history")
 }
 
 model MedicalNote {
-  id         String   @id @default(uuid())
+  id         String    @id @default(uuid())
   patientId  String
   doctorId   String
   content    String
-  isDraft    Boolean  @default(true)
+  isDraft    Boolean   @default(true)
   approvedAt DateTime?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
-  patient    Patient  @relation(fields: [patientId], references: [id])
-  doctor     Doctor   @relation(fields: [doctorId], references: [id])
+  patient Patient @relation(fields: [patientId], references: [id])
+  doctor  Doctor  @relation(fields: [doctorId], references: [id])
 
   @@map("medical_notes")
 }
@@ -367,7 +373,7 @@ model LabResult {
   labName    String?
   createdAt  DateTime        @default(now())
 
-  patient    Patient         @relation(fields: [patientId], references: [id])
+  patient Patient @relation(fields: [patientId], references: [id])
 
   @@index([patientId, orderDate])
   @@map("lab_results")
@@ -389,25 +395,25 @@ model RadiologyReport {
   thumbnailUrl    String?
   createdAt       DateTime @default(now())
 
-  patient         Patient  @relation(fields: [patientId], references: [id])
+  patient Patient @relation(fields: [patientId], references: [id])
 
   @@index([patientId])
   @@map("radiology_reports")
 }
 
 model Prescription {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   patientId   String
   doctorId    String
   issueDate   DateTime
   expiryDate  DateTime?
   medications Json
   notes       String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
 
-  patient     Patient  @relation(fields: [patientId], references: [id])
-  doctor      Doctor   @relation(fields: [doctorId], references: [id])
+  patient Patient @relation(fields: [patientId], references: [id])
+  doctor  Doctor  @relation(fields: [doctorId], references: [id])
 
   @@index([patientId])
   @@map("prescriptions")
@@ -433,12 +439,14 @@ model Bill {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
-  patient        Patient       @relation(fields: [patientId], references: [id])
-  appointment    Appointment?  @relation(fields: [appointmentId], references: [id])
-  items          BillItem[]
-  payments       Payment[]
+  patient     Patient      @relation(fields: [patientId], references: [id])
+  appointment Appointment? @relation(fields: [appointmentId], references: [id])
+  items       BillItem[]
+  payments    Payment[]
 
   @@index([patientId])
+  @@index([status])
+  @@index([issueDate, status])
   @@map("bills")
 }
 
@@ -450,7 +458,7 @@ model BillItem {
   unitPrice   Decimal @db.Decimal(10, 2)
   total       Decimal @db.Decimal(10, 2)
 
-  bill        Bill    @relation(fields: [billId], references: [id], onDelete: Cascade)
+  bill Bill @relation(fields: [billId], references: [id], onDelete: Cascade)
 
   @@map("bill_items")
 }
@@ -465,7 +473,7 @@ model Payment {
   notes         String?
   status        String        @default("SUCCESS")
 
-  bill          Bill          @relation(fields: [billId], references: [id])
+  bill Bill @relation(fields: [billId], references: [id])
 
   @@map("payments")
 }
@@ -481,7 +489,7 @@ model Admin {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("admins")
 }
@@ -500,7 +508,7 @@ model Notification {
   sentAt    DateTime?
   createdAt DateTime            @default(now())
 
-  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead])
   @@map("notifications")
@@ -514,8 +522,8 @@ model ChatSession {
   startedAt DateTime  @default(now())
   endedAt   DateTime?
 
-  patient   Patient   @relation(fields: [patientId], references: [id])
-  messages  ChatMessage[]
+  patient  Patient       @relation(fields: [patientId], references: [id])
+  messages ChatMessage[]
 
   @@map("chat_sessions")
 }
@@ -528,7 +536,7 @@ model ChatMessage {
   metadata  Json?
   createdAt DateTime @default(now())
 
-  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@map("chat_messages")
 }
@@ -547,7 +555,7 @@ model AuditLog {
   userAgent String?
   createdAt DateTime @default(now())
 
-  user      User?    @relation(fields: [userId], references: [id])
+  user User? @relation(fields: [userId], references: [id])
 
   @@index([entity, entityId])
   @@index([userId])
@@ -557,20 +565,20 @@ model AuditLog {
 // ─────────────── WAITLIST ───────────────
 
 model WaitlistEntry {
-  id             String   @id @default(uuid())
+  id             String    @id @default(uuid())
   patientId      String
   doctorId       String
   branchId       String?
-  requestedDate  DateTime @db.Date
+  requestedDate  DateTime  @db.Date
   preferredTimes String[]
   reason         String?
-  status         String   @default("WAITING")
+  status         String    @default("WAITING")
   notifiedAt     DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  patient        Patient  @relation(fields: [patientId], references: [id])
-  doctor         Doctor   @relation(fields: [doctorId], references: [id])
+  patient Patient @relation(fields: [patientId], references: [id])
+  doctor  Doctor  @relation(fields: [doctorId], references: [id])
 
   @@index([doctorId, requestedDate])
   @@index([patientId])

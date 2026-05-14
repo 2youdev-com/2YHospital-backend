@@ -6,9 +6,19 @@ import prisma from '../../config/prisma';
 
 const authService = new AuthService();
 
+const normalizePhone = (phone: string): string => {
+  let p = phone.trim();
+  if (p.startsWith('0')) p = '+966' + p.substring(1);
+  if (!p.startsWith('+')) {
+    if (p.startsWith('966')) p = '+' + p;
+    else p = '+966' + p;
+  }
+  return p;
+};
+
 export const sendOtp = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { phone } = req.body;
+    const phone = normalizePhone(req.body.phone);
     await authService.sendOtp(phone);
     sendSuccess(res, null, 'تم إرسال رمز التحقق إلى رقم جوالك');
   } catch (err: any) {
@@ -18,7 +28,8 @@ export const sendOtp = async (req: Request, res: Response): Promise<void> => {
 
 export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { phone, otp } = req.body;
+    const phone = normalizePhone(req.body.phone);
+    const { otp } = req.body;
     const result = await authService.verifyOtpAndLogin(phone, otp);
     sendSuccess(res, result, 'تم تسجيل الدخول بنجاح');
   } catch (err: any) {

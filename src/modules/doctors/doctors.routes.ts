@@ -11,9 +11,8 @@ const router = Router();
 // Public
 router.get('/search', searchDoctors);
 router.get('/specialties', getSpecialties);
-router.get('/:id', getDoctorProfile);
 
-// Doctor (protected)
+// Doctor (protected) — MUST come before /:id to avoid "me" being treated as an ID
 router.get('/me/profile', authenticate, authorize('DOCTOR'), getMyProfile);
 router.put('/me/profile', authenticate, authorize('DOCTOR'), updateMyProfile);
 router.put('/me/schedule', authenticate, authorize('DOCTOR'), setSchedule);
@@ -23,4 +22,8 @@ router.get('/me/stats', authenticate, authorize('DOCTOR'), getDoctorStats);
 // Admin
 router.post('/', authenticate, authorize('ADMIN'), createDoctor);
 
+// Public (wildcard — must be LAST)
+router.get('/:id', getDoctorProfile);
+
 export default router;
+

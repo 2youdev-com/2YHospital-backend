@@ -11,6 +11,7 @@ import {
   getRecentAppointments,
   getUsers,
   toggleUserStatus,
+  createPatient,
   getBranches,
   createBranch,
   updateBranch,
@@ -36,6 +37,7 @@ router.get('/analytics/recent-appointments',  authorize('ADMIN', 'RECEPTIONIST')
 // Users
 router.get('/users',                  authorize('ADMIN', 'RECEPTIONIST'), getUsers);
 router.patch('/users/:id/toggle-status', authorize('ADMIN'), toggleUserStatus);
+router.post('/patients',               authorize('ADMIN', 'RECEPTIONIST'), createPatient);
 
 // Branches
 router.get('/branches',    getBranches);

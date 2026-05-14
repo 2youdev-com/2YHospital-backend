@@ -62,77 +62,87 @@ export class AppointmentsService {
   async book(userId: string, data: any) {
     const { doctorId, date, startTime, type, reason, dependentId, branchId, patientId } = data;
     
-    let targetPatientId: string;
+    return prisma.$transaction(async (tx) => {
+      let targetPatientId: string;
 
-    if (patientId) {
-      targetPatientId = patientId;
-      // Optional: verify patient exists
-      const p = await prisma.patient.findUnique({ where: { id: targetPatientId } });
-      if (!p) throw new Error('المريض المحدد غير موجود في النظام');
-    } else {
-      const patient = await prisma.patient.findFirst({ where: { userId } });
-      if (!patient) throw new Error('المريض غير موجود');
-      targetPatientId = patient.id;
-    }
+      if (patientId) {
+        targetPatientId = patientId;
+        const p = await tx.patient.findUnique({ where: { id: targetPatientId } });
+        if (!p) throw new Error('المريض المحدد غير موجود في النظام');
+      } else {
+        const patient = await tx.patient.findFirst({ where: { userId } });
+        if (!patient) throw new Error('المريض غير موجود');
+        targetPatientId = patient.id;
+      }
 
-    const dateObj = new Date(date);
-    const available = await this.getAvailableSlots(doctorId, date, branchId);
-    
-    // Normalize startTime comparison (trim, etc)
-    const normalizedStart = startTime.trim();
-    if (!available.includes(normalizedStart)) {
-      throw new Error('الموعد المختار غير متاح حالياً. يرجى اختيار وقت آخر');
-    }
+      const dateObj = new Date(date);
+      const dayOfWeek = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'][dateObj.getDay()];
 
-    if (!dependentId) {
-      const overlap = await prisma.appointment.findFirst({
+      const schedule = await tx.doctorSchedule.findFirst({
+        where: { doctorId, dayOfWeek: dayOfWeek as any, isActive: true, ...(branchId && { branchId }) },
+      });
+      if (!schedule) throw new Error('لا يوجد جدول متاح للطبيب في هذا اليوم');
+
+      const normalizedStart = startTime.trim();
+
+      // Check for blocked slots
+      const isBlocked = await tx.blockedSlot.findFirst({
+        where: { scheduleId: schedule.id, date: dateObj, startTime: { lte: normalizedStart }, endTime: { gt: normalizedStart } }
+      });
+      if (isBlocked) throw new Error('الموعد المختار محجوب حالياً');
+
+      // Check if slot is already booked
+      const existingAppt = await tx.appointment.findFirst({
         where: {
-          patientId: targetPatientId,
+          doctorId,
           date: dateObj,
           startTime: normalizedStart,
-          status: { in: [AppointmentStatus.CONFIRMED, AppointmentStatus.PENDING] },
+          status: { in: [AppointmentStatus.CONFIRMED, AppointmentStatus.PENDING] }
+        }
+      });
+      if (existingAppt) throw new Error('الموعد المختار محجوز بالفعل، يرجى اختيار وقت آخر');
+
+      // Check if patient already has an appointment
+      if (!dependentId) {
+        const overlap = await tx.appointment.findFirst({
+          where: {
+            patientId: targetPatientId,
+            date: dateObj,
+            startTime: normalizedStart,
+            status: { in: [AppointmentStatus.CONFIRMED, AppointmentStatus.PENDING] },
+          },
+        });
+        if (overlap) throw new Error('المريض لديه موعد مؤكد بالفعل في هذا التوقيت');
+      }
+
+      const [h, m] = normalizedStart.split(':').map(Number);
+      const duration = schedule.slotDuration || 20;
+      const endMinutes = h * 60 + m + duration;
+      const endTime = `${Math.floor(endMinutes/60).toString().padStart(2,'0')}:${(endMinutes%60).toString().padStart(2,'0')}`;
+
+      const appointment = await tx.appointment.create({
+        data: {
+          referenceNumber: this.generateRef(),
+          patientId: targetPatientId,
+          dependentId: dependentId || null,
+          doctorId,
+          branchId: branchId || null,
+          date: dateObj,
+          startTime: normalizedStart,
+          endTime,
+          type: (type as AppointmentType) || AppointmentType.NEW_VISIT,
+          status: AppointmentStatus.CONFIRMED,
+          reason: reason || null,
+        },
+        include: {
+          doctor: { include: { specialty: true } },
+          branch: true,
+          patient: { select: { nameAr: true, mrn: true } }
         },
       });
-      if (overlap) throw new Error('المريض لديه موعد مؤكد بالفعل في هذا التوقيت');
-    }
 
-    const dayOfWeek = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'][dateObj.getDay()];
-    const schedule = await prisma.doctorSchedule.findFirst({
-      where: { 
-        doctorId, 
-        dayOfWeek: dayOfWeek as any, 
-        isActive: true,
-        ...(branchId && { branchId })
-      },
-    });
-
-    const [h, m] = normalizedStart.split(':').map(Number);
-    const duration = schedule?.slotDuration || 20;
-    const endMinutes = h * 60 + m + duration;
-    const endTime = `${Math.floor(endMinutes/60).toString().padStart(2,'0')}:${(endMinutes%60).toString().padStart(2,'0')}`;
-
-    const appointment = await prisma.appointment.create({
-      data: {
-        referenceNumber: this.generateRef(),
-        patientId: targetPatientId,
-        dependentId: dependentId || null,
-        doctorId,
-        branchId: branchId || null,
-        date: dateObj,
-        startTime: normalizedStart,
-        endTime,
-        type: (type as AppointmentType) || AppointmentType.NEW_VISIT,
-        status: AppointmentStatus.CONFIRMED,
-        reason: reason || null,
-      },
-      include: {
-        doctor: { include: { specialty: true } },
-        branch: true,
-        patient: { select: { nameAr: true, mrn: true } }
-      },
-    });
-
-    return appointment;
+      return appointment;
+    }, { isolationLevel: 'Serializable' });
   }
 
   async getPatientAppointments(userId: string, status?: string, page = 1, limit = 10) {
@@ -159,12 +169,24 @@ export class AppointmentsService {
     return { items, pagination: buildPagination(total, page, limit) };
   }
 
-  async getOne(appointmentId: string, userId: string) {
-    const patient = await prisma.patient.findFirst({ where: { userId } });
+  async getOne(appointmentId: string, userId: string, role?: string) {
+    const where: any = { id: appointmentId };
+    
+    if (role === 'PATIENT') {
+      const patient = await prisma.patient.findFirst({ where: { userId } });
+      if (!patient) throw new Error('المريض غير موجود');
+      where.patientId = patient.id;
+    } else if (role === 'DOCTOR') {
+      const doctor = await prisma.doctor.findFirst({ where: { userId } });
+      if (!doctor) throw new Error('الطبيب غير موجود');
+      where.doctorId = doctor.id;
+    }
+
     const appt = await prisma.appointment.findFirst({
-      where: { id: appointmentId, ...(patient && { patientId: patient.id }) },
+      where,
       include: {
         doctor: { include: { specialty: true } },
+        patient: true,
         branch: true,
         dependent: true,
         bill: true,
@@ -174,13 +196,20 @@ export class AppointmentsService {
     return appt;
   }
 
-  async cancel(appointmentId: string, userId: string, reason?: string) {
-    const patient = await prisma.patient.findFirst({ where: { userId } });
-    if (!patient) throw new Error('المريض غير موجود');
+  async cancel(appointmentId: string, userId: string, role?: string, reason?: string) {
+    const where: any = { id: appointmentId };
 
-    const appt = await prisma.appointment.findFirst({
-      where: { id: appointmentId, patientId: patient.id },
-    });
+    if (role === 'PATIENT') {
+      const patient = await prisma.patient.findFirst({ where: { userId } });
+      if (!patient) throw new Error('المريض غير موجود');
+      where.patientId = patient.id;
+    } else if (role === 'DOCTOR') {
+      const doctor = await prisma.doctor.findFirst({ where: { userId } });
+      if (!doctor) throw new Error('الطبيب غير موجود');
+      where.doctorId = doctor.id;
+    }
+
+    const appt = await prisma.appointment.findFirst({ where });
     if (!appt) throw new Error('الموعد غير موجود');
     if (
       ([AppointmentStatus.CANCELLED, AppointmentStatus.COMPLETED] as AppointmentStatus[]).includes(appt.status)
@@ -294,5 +323,23 @@ export class AppointmentsService {
     ]);
 
     return { items, pagination: buildPagination(total, page, limit) };
+  }
+
+  async updateStatus(appointmentId: string, userId: string, role: string, status: AppointmentStatus) {
+    const where: any = { id: appointmentId };
+    
+    if (role === 'DOCTOR') {
+      const doctor = await prisma.doctor.findFirst({ where: { userId } });
+      if (!doctor) throw new Error('الطبيب غير موجود');
+      where.doctorId = doctor.id;
+    } // ADMIN/RECEPTIONIST can update any, PATIENT cannot update status directly via this route
+
+    const appt = await prisma.appointment.findFirst({ where });
+    if (!appt) throw new Error('الموعد غير موجود');
+
+    return prisma.appointment.update({
+      where: { id: appointmentId },
+      data: { status },
+    });
   }
 }

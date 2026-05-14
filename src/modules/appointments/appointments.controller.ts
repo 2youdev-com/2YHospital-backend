@@ -30,14 +30,14 @@ export const getMyAppointments = async (req: AuthenticatedRequest, res: Response
 
 export const getAppointment = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const appt = await svc.getOne(req.params.id, req.user!.id);
+    const appt = await svc.getOne(req.params.id, req.user!.id, req.user!.role);
     sendSuccess(res, appt, 'تفاصيل الموعد');
   } catch (e: any) { sendError(res, e.message, 404); }
 };
 
 export const cancelAppointment = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const appt = await svc.cancel(req.params.id, req.user!.id, req.body.reason);
+    const appt = await svc.cancel(req.params.id, req.user!.id, req.user!.role, req.body.reason);
     sendSuccess(res, appt, 'تم إلغاء الموعد بنجاح');
   } catch (e: any) { sendError(res, e.message); }
 };
@@ -62,5 +62,12 @@ export const getAllAppointments = async (req: AuthenticatedRequest, res: Respons
     const { status, doctorId, branchId, date, page, limit } = req.query as any;
     const result = await svc.getAll({ status, doctorId, branchId, date }, +page || 1, +limit || 10);
     sendSuccess(res, result.items, 'جميع المواعيد', 200, result.pagination);
+  } catch (e: any) { sendError(res, e.message); }
+};
+
+export const updateStatus = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const appt = await svc.updateStatus(req.params.id, req.user!.id, req.user!.role, req.body.status);
+    sendSuccess(res, appt, 'تم تحديث حالة الموعد');
   } catch (e: any) { sendError(res, e.message); }
 };

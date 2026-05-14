@@ -88,6 +88,16 @@ export class MedicalRecordsService {
     return { items, pagination: buildPagination(total, page, limit) };
   }
 
+  private async doctorCanAccessPatient(doctorId: string, patientId: string): Promise<boolean> {
+    const [appointment, note, prescription, visit] = await Promise.all([
+      prisma.appointment.findFirst({ where: { doctorId, patientId }, select: { id: true } }),
+      prisma.medicalNote.findFirst({ where: { doctorId, patientId }, select: { id: true } }),
+      prisma.prescription.findFirst({ where: { doctorId, patientId }, select: { id: true } }),
+      prisma.visitHistory.findFirst({ where: { doctorId, patientId }, select: { id: true } }),
+    ]);
+    return Boolean(appointment || note || prescription || visit);
+  }
+
   // ─── Doctor: get patient summary ───
   async getPatientSummary(patientId: string, doctorUserId: string) {
     const doctor = await prisma.doctor.findFirst({ where: { userId: doctorUserId } });
@@ -95,6 +105,9 @@ export class MedicalRecordsService {
 
     const patient = await prisma.patient.findUnique({ where: { id: patientId } });
     if (!patient) throw new Error('المريض غير موجود');
+
+    const authorized = await this.doctorCanAccessPatient(doctor.id, patientId);
+    if (!authorized) throw new Error('ليس لديك صلاحية للوصول إلى ملف هذا المريض');
 
     const [recentVisits, labResults, prescriptions, radiology] = await Promise.all([
       prisma.visitHistory.findMany({
@@ -140,6 +153,10 @@ export class MedicalRecordsService {
   async addMedicalNote(doctorUserId: string, patientId: string, content: string) {
     const doctor = await prisma.doctor.findFirst({ where: { userId: doctorUserId } });
     if (!doctor) throw new Error('الطبيب غير موجود');
+
+    const authorized = await this.doctorCanAccessPatient(doctor.id, patientId);
+    if (!authorized) throw new Error('ليس لديك صلاحية لإضافة ملاحظات لهذا المريض');
+
     return prisma.medicalNote.create({
       data: { patientId, doctorId: doctor.id, content, isDraft: true },
     });

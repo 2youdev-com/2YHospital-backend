@@ -129,25 +129,39 @@ export class DoctorsService {
 
   // Admin: create doctor
   async createDoctor(data: any) {
-    // Create user first
-    const user = await prisma.user.create({
-      data: {
-        phone: data.phone,
-        role: 'DOCTOR',
-        doctor: {
-          create: {
-            nameAr: data.nameAr,
-            nameEn: data.nameEn,
-            specialtyId: data.specialtyId,
-            licenseNumber: data.licenseNumber,
-            bio: data.bio,
-            consultationFee: data.consultationFee,
+    // Normalize phone number to avoid duplicate account issues
+    let p = data.phone?.trim() || '';
+    if (p.startsWith('0')) p = '+966' + p.substring(1);
+    if (!p.startsWith('+')) {
+      if (p.startsWith('966')) p = '+' + p;
+      else p = '+966' + p;
+    }
+
+    try {
+      const user = await prisma.user.create({
+        data: {
+          phone: p,
+          role: 'DOCTOR',
+          doctor: {
+            create: {
+              nameAr: data.nameAr || data.name || 'طبيب جديد',
+              nameEn: data.nameEn,
+              specialtyId: data.specialtyId,
+              licenseNumber: data.licenseNumber || `DOC-${Date.now()}`,
+              bio: data.bio,
+              consultationFee: data.consultationFee ? Number(data.consultationFee) : null,
+            },
           },
         },
-      },
-      include: { doctor: true },
-    });
-    return user;
+        include: { doctor: true },
+      });
+      return user;
+    } catch (error: any) {
+      if (error.code === 'P2002') {
+        throw new Error('رقم الجوال مسجل مسبقاً في النظام');
+      }
+      throw error;
+    }
   }
 
   async getDoctorStats(userId: string) {
