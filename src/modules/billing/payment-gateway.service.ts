@@ -21,7 +21,7 @@ export class PaymentGatewayService {
       return {
         clientSecret: `mock_secret_${billId}_${Date.now()}`,
         amount: remaining,
-        currency: 'sar',
+        currency: 'egp',
         billId,
         mode: 'development',
       };
@@ -29,7 +29,7 @@ export class PaymentGatewayService {
 
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(remaining * 100), // Stripe uses smallest currency unit
-      currency: 'sar',
+      currency: 'egp',
       metadata: { billId, patientId: patient.id, billNumber: bill.billNumber },
       description: `2YHospital - فاتورة رقم ${bill.billNumber}`,
     });
@@ -37,7 +37,7 @@ export class PaymentGatewayService {
     return {
       clientSecret: paymentIntent.client_secret,
       amount: remaining,
-      currency: 'sar',
+      currency: 'egp',
       billId,
     };
   }

@@ -22,7 +22,7 @@ export const checkOtpThrottle = async (phone: string): Promise<void> => {
   if (blocked) {
     const ttl = await redis.ttl(blockKey);
     const minutes = Math.ceil(ttl / 60);
-    throw new Error(`تم تجاوز الحد المسموح. يرجى الانتظار ${minutes} دقيقة قبل المحاولة مجدداً`);
+    throw new Error(`تم تجاوز الحد المسموح. يُرجى الانتظار ${minutes} دقيقة قبل المحاولة مجدداً`);
   }
 
   const countKey = `otp:send:count:${phone}`;
@@ -33,7 +33,7 @@ export const checkOtpThrottle = async (phone: string): Promise<void> => {
   if (count > MAX_OTP_ATTEMPTS) {
     await redis.setex(blockKey, BLOCK_DURATION_SECONDS, '1');
     await redis.del(countKey);
-    throw new Error('تم تجاوز الحد المسموح لإرسال رمز التحقق. يرجى الانتظار 15 دقيقة');
+    throw new Error('تم تجاوز الحد المسموح لإرسال رمز التحقق. يُرجى الانتظار 15 دقيقة');
   }
 };
 
@@ -49,7 +49,7 @@ export const verifyOtp = async (phone: string, otp: string): Promise<boolean> =>
 
   const blocked = await redis.get(blockKey);
   if (blocked) {
-    throw new Error('الحساب موقوف مؤقتاً بسبب محاولات متعددة. يرجى الانتظار');
+    throw new Error('الحساب موقوف مؤقتاً بسبب محاولات متعددة. يُرجى الانتظار');
   }
 
   const key = `otp:${phone}`;

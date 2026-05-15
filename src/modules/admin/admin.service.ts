@@ -2,6 +2,7 @@
 import prisma from '../../config/prisma';
 import { getPagination, buildPagination } from '../../utils/response';
 import { UserRole } from '@prisma/client';
+import { normalizePhone } from '../../utils/phone';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function dayBounds(offsetDays = 0): { start: Date; end: Date } {
@@ -357,13 +358,8 @@ export class AdminService {
   }
 
   async createPatient(data: any) {
-    // Normalize phone number
-    let p = data.phone?.trim() || '';
-    if (p.startsWith('0')) p = '+966' + p.substring(1);
-    if (!p.startsWith('+')) {
-      if (p.startsWith('966')) p = '+' + p;
-      else p = '+966' + p;
-    }
+    // Normalize phone number (supports Egypt, +20)
+    const p = normalizePhone(data.phone?.trim() || '', '+20');
 
     try {
       const user = await prisma.user.create({
@@ -387,7 +383,7 @@ export class AdminService {
       return user;
     } catch (error: any) {
       if (error.code === 'P2002') {
-        throw new Error('رقم الجوال مسجل مسبقاً في النظام');
+        throw new Error('رقم الهاتف مسجل مسبقاً في النظام');
       }
       throw error;
     }

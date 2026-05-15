@@ -129,13 +129,9 @@ export class DoctorsService {
 
   // Admin: create doctor
   async createDoctor(data: any) {
-    // Normalize phone number to avoid duplicate account issues
-    let p = data.phone?.trim() || '';
-    if (p.startsWith('0')) p = '+966' + p.substring(1);
-    if (!p.startsWith('+')) {
-      if (p.startsWith('966')) p = '+' + p;
-      else p = '+966' + p;
-    }
+    // Normalize phone number to avoid duplicate account issues using Egypt defaults
+    const { normalizePhone } = require('../../utils/phone');
+    const p = normalizePhone(data.phone || '', '+20');
 
     try {
       const user = await prisma.user.create({
@@ -158,7 +154,7 @@ export class DoctorsService {
       return user;
     } catch (error: any) {
       if (error.code === 'P2002') {
-        throw new Error('رقم الجوال مسجل مسبقاً في النظام');
+        throw new Error('رقم الهاتف مسجل مسبقاً في النظام');
       }
       throw error;
     }

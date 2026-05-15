@@ -94,9 +94,9 @@ GET  /auth/me                              → current user
 
 | Role | Phone |
 |------|-------|
-| Admin | +966500000000 |
-| Doctor | +966511111111 |
-| Patient | +966522222222 |
+| Admin | +201000000000 |
+| Doctor | +201111111111 |
+| Patient | +201222222222 |
 
 > In dev mode, OTP is printed to console.
 

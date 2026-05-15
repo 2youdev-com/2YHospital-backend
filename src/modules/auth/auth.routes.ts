@@ -6,10 +6,10 @@ import { sendOtp, verifyOtp, refreshToken, logout, getMe } from './auth.controll
 
 const router = Router();
 
-// FIX: Added phone format validation (international format)
+// Egypt: accepts permissive format, detailed validation is in validatePhone (controller)
 const phoneValidation = body('phone')
-  .notEmpty().withMessage('رقم الجوال مطلوب')
-  .matches(/^\+?[0-9]{7,15}$/).withMessage('صيغة رقم الجوال غير صحيحة');
+  .notEmpty().withMessage('رقم الهاتف مطلوب')
+  .matches(/^\+?\d{10,15}$/).withMessage('رقم الهاتف غير صحيح');
 
 router.post(
   '/send-otp',

@@ -28,10 +28,10 @@ async function main() {
 
   // ─── Admin user ───
   const adminUser = await prisma.user.upsert({
-    where: { phone: '+966500000000' },
+    where: { phone: '+201000000000' },
     update: {},
     create: {
-      phone: '+966500000000',
+      phone: '+201000000000',
       role: UserRole.ADMIN,
       admin: { create: { nameAr: 'مدير النظام', nameEn: 'System Admin', position: 'Super Admin' } },
     },
@@ -40,10 +40,10 @@ async function main() {
 
   // ─── Receptionist user ───
   await prisma.user.upsert({
-    where: { phone: '+966533333333' },
+    where: { phone: '+201533333333' },
     update: {},
     create: {
-      phone: '+966533333333',
+      phone: '+201533333333',
       role: UserRole.RECEPTIONIST,
     },
   });
@@ -51,10 +51,10 @@ async function main() {
 
   // ─── Finance user ───
   await prisma.user.upsert({
-    where: { phone: '+966544444444' },
+    where: { phone: '+201044444444' },
     update: {},
     create: {
-      phone: '+966544444444',
+      phone: '+201044444444',
       role: UserRole.FINANCE,
     },
   });
@@ -62,10 +62,10 @@ async function main() {
 
   // ─── Doctor user ───
   const doctorUser = await prisma.user.upsert({
-    where: { phone: '+966511111111' },
+    where: { phone: '+201111111111' },
     update: {},
     create: {
-      phone: '+966511111111',
+      phone: '+201111111111',
       role: UserRole.DOCTOR,
       doctor: {
         create: {
@@ -83,16 +83,21 @@ async function main() {
 
   // Schedule for doctor
   if (doctorUser.doctor) {
-    const workDays: DayOfWeek[] = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY'];
+    const workDays: DayOfWeek[] = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
     for (const day of workDays) {
       await prisma.doctorSchedule.upsert({
         where: { doctorId_dayOfWeek_branchId: { doctorId: doctorUser.doctor.id, dayOfWeek: day, branchId: branch.id } },
-        update: {},
+        update: {
+          startTime: '08:00',
+          endTime: '22:00',
+          slotDuration: 20,
+          isActive: true,
+        },
         create: {
           doctorId: doctorUser.doctor.id,
           dayOfWeek: day,
           startTime: '08:00',
-          endTime: '14:00',
+          endTime: '22:00',
           slotDuration: 20,
           branchId: branch.id,
         },
@@ -103,10 +108,10 @@ async function main() {
 
   // ─── Patient user ───
   await prisma.user.upsert({
-    where: { phone: '+966522222222' },
+    where: { phone: '+201222222222' },
     update: {},
     create: {
-      phone: '+966522222222',
+      phone: '+201222222222',
       role: UserRole.PATIENT,
       patient: {
         create: {
@@ -127,11 +132,11 @@ async function main() {
 
   console.log('\n🎉 Seed completed successfully!');
   console.log('\nTest accounts:');
-  console.log('  Admin:   +966500000000');
-  console.log('  Doctor:  +966511111111');
-  console.log('  Patient: +966522222222');
-  console.log('  Receptionist: +966533333333');
-  console.log('  Finance: +966544444444');
+  console.log('  Admin:   +201000000000');
+  console.log('  Doctor:  +201111111111');
+  console.log('  Patient: +201222222222');
+  console.log('  Receptionist: +201533333333');
+  console.log('  Finance: +201044444444');
   console.log('  (In dev mode, OTP is logged to console)');
 }
 

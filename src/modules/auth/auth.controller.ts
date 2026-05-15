@@ -3,24 +3,20 @@ import { AuthService } from './auth.service';
 import { sendSuccess, sendError } from '../../utils/response';
 import { AuthenticatedRequest } from '../../types';
 import prisma from '../../config/prisma';
+import { normalizePhone, validatePhone } from '../../utils/phone';
 
 const authService = new AuthService();
 
-const normalizePhone = (phone: string): string => {
-  let p = phone.trim();
-  if (p.startsWith('0')) p = '+966' + p.substring(1);
-  if (!p.startsWith('+')) {
-    if (p.startsWith('966')) p = '+' + p;
-    else p = '+966' + p;
-  }
-  return p;
-};
-
 export const sendOtp = async (req: Request, res: Response): Promise<void> => {
   try {
-    const phone = normalizePhone(req.body.phone);
+    const phone = normalizePhone(req.body.phone, '+20');
+    const validation = validatePhone(phone);
+    if (!validation.valid) {
+      sendError(res, validation.error || 'رقم الهاتف غير صحيح', 400);
+      return;
+    }
     await authService.sendOtp(phone);
-    sendSuccess(res, null, 'تم إرسال رمز التحقق إلى رقم جوالك');
+    sendSuccess(res, null, 'تم إرسال رمز التحقق إلى هاتفك');
   } catch (err: any) {
     sendError(res, err.message || 'فشل إرسال رمز التحقق', 500);
   }
@@ -28,7 +24,12 @@ export const sendOtp = async (req: Request, res: Response): Promise<void> => {
 
 export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
   try {
-    const phone = normalizePhone(req.body.phone);
+    const phone = normalizePhone(req.body.phone, '+20');
+    const validation = validatePhone(phone);
+    if (!validation.valid) {
+      sendError(res, validation.error || 'رقم الهاتف غير صحيح', 400);
+      return;
+    }
     const { otp } = req.body;
     const result = await authService.verifyOtpAndLogin(phone, otp);
     sendSuccess(res, result, 'تم تسجيل الدخول بنجاح');

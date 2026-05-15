@@ -28,8 +28,6 @@ export class AuthService {
     let user = await prisma.user.findUnique({ where: { phone } });
 
     if (!user) {
-      // FIX: New patients should have empty nameAr instead of 'مستخدم جديد'
-      // so the user is prompted to complete their profile
       user = await prisma.user.create({
         data: {
           phone,
@@ -46,7 +44,7 @@ export class AuthService {
       });
     }
 
-    if (!user.isActive) throw new Error('هذا الحساب موقوف، يرجى التواصل مع الإدارة');
+    if (!user.isActive) throw new Error('هذا الحساب موقوف، يُرجى التواصل مع الإدارة');
 
     const payload = { userId: user.id, role: user.role, phone: user.phone };
     const accessToken = generateAccessToken(payload);
@@ -87,11 +85,11 @@ export class AuthService {
       if (session) {
         await prisma.session.delete({ where: { id: session.id } });
       }
-      throw new Error('جلسة منتهية، يرجى تسجيل الدخول مجدداً');
+      throw new Error('انتهت صلاحية الجلسة، يُرجى تسجيل الدخول مجدداً');
     }
 
     const user = await prisma.user.findUnique({ where: { id: payload.userId } });
-    if (!user || !user.isActive) throw new Error('المستخدم غير موجود');
+    if (!user || !user.isActive) throw new Error('المستخدم غير موجود أو الحساب موقوف');
 
     const newPayload = { userId: user.id, role: user.role, phone: user.phone };
     const accessToken = generateAccessToken(newPayload);
